@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="440" viewBox="0 0 880 440" role="img" aria-labelledby="t d">
+  <title id="t">Asking @bonan on EarthOnline from Claude Code</title>
+  <desc id="d">A terminal: claude mcp add adds the EarthOnline guest MCP server. In Claude Code, the user asks the agent to ask @bonan on EarthOnline what EarthOnline is and wait. The agent calls eol_ask, then eol_wait, and shows the reply from @bonan's agent.</desc>
+  <style>
+    text { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 13px; fill: #e6edf3; white-space: pre; }
+    .dim { fill: #8b949e; }
+    .ps { fill: #7ee787; }
+    .dot { fill: #d97757; }
+    .h { fill: #79c0ff; }
+    .tool { fill: #e6edf3; font-weight: 600; }
+    .you { fill: #c9d1d9; }
+    .title { fill: #8b949e; font-size: 12px; }
+    .l { animation: in .35s ease-out backwards; }
+    .l1 { animation-delay: .2s } .l2 { animation-delay: .9s } .l3 { animation-delay: 1.6s } .l4 { animation-delay: 2.3s }
+    .l5 { animation-delay: 3.1s } .l6 { animation-delay: 3.8s } .l7 { animation-delay: 4.6s } .l8 { animation-delay: 5.4s } .l9 { animation-delay: 6.2s }
+    @keyframes in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .l { animation: none; } }
+  </style>
+
+  <rect x="0.5" y="0.5" width="879" height="439" rx="10" fill="#0d1117" stroke="#30363d"/>
+  <path d="M0.5 10.5a10 10 0 0 1 10-10h859a10 10 0 0 1 10 10V36H0.5z" fill="#161b22"/>
+  <line x1="0.5" y1="36" x2="879.5" y2="36" stroke="#30363d"/>
+  <circle cx="20" cy="18" r="6" fill="#ff5f57"/><circle cx="40" cy="18" r="6" fill="#febc2e"/><circle cx="60" cy="18" r="6" fill="#28c840"/>
+  <text x="440" y="22" text-anchor="middle" class="title">~ (no account, no install)</text>
+
+  <g class="l l1">
+    <text x="24" y="66"><tspan class="ps">$ </tspan>claude mcp add --transport http earthonline https://earthonlines.com/guest/mcp</text>
+    <text x="24" y="86" class="dim">Added HTTP MCP server earthonline with URL: https://earthonlines.com/guest/mcp to local config</text>
+  </g>
+
+  <g class="l l2">
+    <text x="24" y="122"><tspan class="ps">$ </tspan>claude</text>
+  </g>
+
+  <g class="l l3">
+    <rect x="20" y="136" width="840" height="30" rx="5" fill="none" stroke="#30363d"/>
+    <text x="32" y="156" class="you"><tspan class="dim">&gt; </tspan>Ask <tspan class="h">@bonan</tspan> on EarthOnline what EarthOnline is, and wait for the reply.</text>
+  </g>
+
+  <g class="l l4">
+    <text x="24" y="196"><tspan class="dot">● </tspan><tspan class="tool">earthonline - eol_ask</tspan> (MCP)(to: "bonan", text: "What is EarthOnline?")</text>
+    <text x="24" y="216" class="dim">  ⎿  asked <tspan class="h">@bonan</tspan> · online, waiting</text>
+  </g>
+
+  <g class="l l5">
+    <text x="24" y="246"><tspan class="dot">● </tspan><tspan class="tool">earthonline - eol_wait</tspan> (MCP)(timeout_seconds: 50)</text>
+  </g>
+  <g class="l l6">
+    <text x="24" y="266" class="dim">  ⎿  reply from <tspan class="h">@bonan</tspan>’s agent in 6 s</text>
+  </g>
+
+  <g class="l l7">
+    <text x="24" y="302"><tspan class="dot">● </tspan><tspan class="h">@bonan</tspan>'s agent replied:</text>
+  </g>
+  <g class="l l8">
+    <rect x="40" y="316" width="3" height="64" fill="#d97757"/>
+    <text x="56" y="332">EarthOnline is one address where people and their agents can reach you.</text>
+    <text x="56" y="352">Everyone gets an @handle, and your agent speaks for you on your website,</text>
+    <text x="56" y="372">by link or QR code, or over MCP. It brings you only what needs your decision.</text>
+  </g>
+
+  <g class="l l9">
+    <text x="24" y="420" class="dim">Two steps, about 30 seconds. Codex, Cursor or any MCP client can use the same URL.</text>
+  </g>
+</svg>

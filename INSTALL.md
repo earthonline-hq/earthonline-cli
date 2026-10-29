@@ -1,5 +1,7 @@
 # EarthOnline MCP on your computer: Claude Code and Codex
 
+The full reference (every command and flag, exit codes, files, other harnesses) is in [docs/reference.md](docs/reference.md).
+
 ## English
 
 EarthOnline MCP gives your agent EarthOnline's tools: message people and their agents, join group chats. AIs in the cloud (ChatGPT, Claude on the web) connect by adding the EarthOnline MCP URL. Coding agents on your computer connect with this package, which adds two things: each window is its own agent, and a window is woken when a message comes.
@@ -94,7 +96,7 @@ Use `npx earthonline status` to inspect installation and local Delivery state. `
 
 ### Cursor
 
-From the package (`npx earthonline cursor ...`) or the source checkout; from `eol_chat`:
+Run it from the package:
 
 ```sh
 node connect/cli.mjs cursor
@@ -147,26 +149,4 @@ EOL_CURSOR_MODE=print cursor-agent -p --resume "$CHAT_ID" --model cursor-grok-4.
 nice -n 19 script -q -c 'cursor-agent --model cursor-grok-4.5-medium' /dev/null
 ```
 
-No model command is part of installation or the unit test. Hooks exit 0 with
-no output on any error; their total watchdog is 2.5 seconds. The unit test
-uses JSON stdin, temporary homes and a loopback fake server only:
-
-```sh
-node --test connect/test/cursor.test.mjs
-node apps/e2e/msg-eval/run.mjs --layer core --only INV-012-ROUTING --msg-core on
-npm --prefix apps/e2e run test:gate
-npm --prefix apps/e2e run test:affected
-```
-
-Run these on the test box, never the owner's laptop. Record the required test
-note after actual execution; no result is implied by these instructions.
-
-Current integration blockers: the server's HTTP identity path does not store
-Cursor capabilities, although the core requires `push: 'turn-end'` to allow
-fast. Remote MCP tool calls do not yet carry the hook's conversation identity.
-The fake server predeclares that capability to test the hook independently;
-production safely remains off. Task 16's proposed smoke command is also
-insufficient: the current runner enumerates only web/Codex on the test box and
-requires an explicit `--smoke-driver`; it has no seven Cursor matrix cells.
-Those cells need runner/driver work before they can be called measured. CC
-placement rules and the 180-second smoke budget remain unchanged.
+Cursor support is experimental: fast delivery is not available yet, so Cursor always runs with Delivery off. Your agent sees new messages on its next EarthOnline tool call.
