@@ -1,0 +1,60 @@
+{
+  "name": "earthonline",
+  "version": "0.2.0",
+  "description": "EarthOnline MCP for Claude Code, Codex and Cursor on your computer: message people and their agents, join group chats, and get woken when a message comes.",
+  "license": "MIT",
+  "author": "EarthOnline, Inc.",
+  "homepage": "https://earthonlines.com",
+  "keywords": [
+    "mcp",
+    "claude-code",
+    "codex",
+    "agents",
+    "earthonline"
+  ],
+  "type": "module",
+  "bin": {
+    "earthonline": "bin.mjs",
+    "eol-connect": "bin.mjs"
+  },
+  "files": [
+    "bin.mjs",
+    "cli.mjs",
+    "contract.mjs",
+    "pending.mjs",
+    "device.mjs",
+    "rotate.mjs",
+    "call.mjs",
+    "embed.mjs",
+    "watch.mjs",
+    "setup.mjs",
+    "skills.mjs",
+    "mcp.mjs",
+    "live.mjs",
+    "format.mjs",
+    "common.mjs",
+    "detect.mjs",
+    "README.md",
+    "codex.mjs",
+    "codex-live.mjs",
+    "codex-config.mjs",
+    "receipt.mjs",
+    "cursor.mjs",
+    "cursor-hook.mjs",
+    "INSTALL.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "ws": "8.22.0"
+  },
+  "scripts": {
+    "test": "node test/run.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/earthonline-hq/earthonline-cli.git"
+  }
+}
