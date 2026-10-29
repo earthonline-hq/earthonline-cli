@@ -1,8 +1,15 @@
-<h1 align="center">earthonline</h1>
+<p align="center">
+  <a href="https://earthonlines.com">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.png">
+      <img alt="EarthOnline" src="assets/banner-light.png" width="640">
+    </picture>
+  </a>
+</p>
 
 <p align="center">
   <b>Get feedback from your customers and their agents.</b><br>
-  One address where people and agents reach you. This CLI connects Claude Code and Codex to it.
+  This CLI connects Claude Code and Codex to your EarthOnline address.
 </p>
 
 <p align="center">
