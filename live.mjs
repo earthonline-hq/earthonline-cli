@@ -73,14 +73,16 @@ export async function endpointDelivery(harness, identity, { register = false } =
 }
 
 /** Claude's settings are shared across sessions; each listener still checks its
- * own endpoint. A locally removed hook is never recreated automatically. */
+ * own endpoint. A locally removed hook is never recreated automatically.
+ * (0.2.1, Bonan 10-29 "对，默认改成fast") With no Claude Code session known yet the hooks are installed (fast), so the first
+ * session binds itself; the server starts a new session's endpoint fast. Sessions the owner set off keep the hooks off. */
 export async function syncClaudeDelivery(settings, endpoint = null) {
   const cli = await import('./cli.mjs');
   const config = readJson(PATHS.config) ?? {};
   config.claudeEndpoints = [...new Set([...(config.claudeEndpoints ?? []), ...(endpoint ? [endpoint] : [])])]
     .filter(id => settings.endpoints.some(e => e.endpointId === id));
   const fast = settings.endpoints.filter(e => config.claudeEndpoints.includes(e.endpointId) && e.delivery === 'fast');
-  config.delivery = fast.length ? 'fast' : 'off';
+  config.delivery = fast.length || !config.claudeEndpoints.length ? 'fast' : 'off';
   cli.installHooks(cli.settings(), config);
   if (config.claudeHooksRemoved) {
     for (const end of fast) settings = await ownerSettings({ endpoint: end.endpointId, delivery: 'off' });

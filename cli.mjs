@@ -576,8 +576,9 @@ async function codexDelivery() {
   if (policy) { config.delivery = 'off'; saveConfig(config); }
   return [];
 }
-// How a Codex app thread is woken: fast or off, default off (
-// fast measured 10-20 on Bonan's machine, it does not take the focus). wakeName is codex-live.mjs's, so an old quiet
+// How a Codex app thread is woken: fast or off (fast measured
+// 10-20 on Bonan's machine, it does not take the focus), default fast since 0.2.1 (Bonan 10-29: "对，默认改成fast"); a wake
+// already saved (an owner's off included) is kept. wakeName is codex-live.mjs's, so an old quiet
 // (saved by 0.1.x, or in an old script's --codex-wake) reads as off here exactly as the delivery reads it.
 const WAKES = { off: 'Off: nothing enters the thread; the agent sees new messages at its next eol_ call', fast: 'Fast: queue it and wake the Codex app (about 3 s)' };
 async function installCodex(config, opts) {
@@ -607,17 +608,19 @@ async function installCodex(config, opts) {
     if (next.separator !== null) config.codexBlock = { separator: next.separator };
     say(`Codex: added EarthOnline MCP to ${file}: only the lines between the "eol-connect" markers${backup ? `; the file before it is ${backup}` : ''}. The Codex app and plain codex load it in new threads; uninstall removes it.`);
   }
-  // How a thread in the Codex app is woken when a message comes: asked once (the web's setting wins once it exists).
+  // How a thread in the Codex app is woken when a message comes: asked once (the web's setting wins once it exists). Enter
+  // keeps the saved choice, else fast.
   let wake = wakeName(opts.codexWake) ?? wakeName(config.codexWake);
   if (!opts.codexWake && !opts.keyStdin && interactive()) {
     const q = questions();
+    const current = wake ?? 'fast';
     try {
-      const answer = await q.ask(`When a message arrives for a thread in the Codex app:\n  1) ${WAKES.off} [default]\n  2) ${WAKES.fast}\nChoose 1 or 2: `, true);
-      wake = answer === '2' ? 'fast' : 'off';
+      const answer = await q.ask(`When a message arrives for a thread in the Codex app:\n  1) ${WAKES.fast}${current === 'fast' ? ' [default]' : ''}\n  2) ${WAKES.off}${current === 'off' ? ' [default]' : ''}\nChoose 1 or 2: `, true);
+      wake = answer === '1' ? 'fast' : answer === '2' ? 'off' : current;
     } finally { q.close(); }
   }
   config.codexMcpName = name;
-  config.codexWake = wake ?? 'off';
+  config.codexWake = wake ?? 'fast';
   saveConfig(config);
   say(`Codex: a thread is connected from its first eol_ tool call. Waking: ${WAKES[config.codexWake]}. Change it with npx earthonline --agent codex --codex-wake fast|off. A terminal session with instant delivery: npx earthonline codex.`);
   return `Codex ✓ (app and CLI; wake: ${config.codexWake}).`;
@@ -793,7 +796,7 @@ async function status(opts = {}, { doctor = false } = {}) {
   say(`Claude Code: ${installedHooks}/${Object.keys(events).length} hooks; MCP ${config.claudeMcp ? 'registered by installer' : 'not registered by installer'}; app ${report.app === 'missing' ? 'missing' : 'installed'}.`);
   let codex = false; try { codexCommand(); codex = true; } catch {}
   let section = false; try { section = hasOurBlock(fs.readFileSync(codexConfigFile(), 'utf8')); } catch {}
-  say(`Codex: ${codex ? 'executable found' : 'executable not found (set EOL_CODEX_BIN)'}; config.toml ${section ? "has EarthOnline's section (the Codex app and plain codex)" : 'has no EarthOnline section'}; wake: ${wakeName(config.codexWake) ?? 'off'}.`);
+  say(`Codex: ${codex ? 'executable found' : 'executable not found (set EOL_CODEX_BIN)'}; config.toml ${section ? "has EarthOnline's section (the Codex app and plain codex)" : 'has no EarthOnline section'}; wake: ${wakeName(config.codexWake) ?? 'fast'}.`);
   const sessions = activeCodexWrappers();
   say('Active EOL Codex sessions: ' + sessions + '.');
   const running = await listeners();
@@ -804,7 +807,7 @@ async function status(opts = {}, { doctor = false } = {}) {
   if (skills.length) say(`Skills: ${skills.map(k => `${SUPPORTED[k.host] ?? k.host} ${k.status}`).join(', ')}.`);
   const skillOf = host => skills.find(k => k.host === host)?.status ?? null;
   report.claude_code = { mcp: Boolean(config.claudeMcp), hooks: installedHooks, delivery: policy ? (config.delivery ?? 'off') : null, listeners: running.confirmed.length, skill: skillOf('claude-code') };
-  report.codex = { executable: codex, config: section, wake: wakeName(config.codexWake) ?? 'off', sessions, skill: skillOf('codex') };
+  report.codex = { executable: codex, config: section, wake: wakeName(config.codexWake) ?? 'fast', sessions, skill: skillOf('codex') };
   if (!setUp.length) {
     const supported = found.filter(h => h.supported);
     problems.push(supported.length

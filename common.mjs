@@ -36,7 +36,7 @@ if (Number(process.versions.node.split('.')[0]) < 21) {
   };
 }
 
-export const VERSION = '0.2.0'; // test/run.mjs checks it against package.json
+export const VERSION = '0.2.1'; // test/run.mjs checks it against package.json
 /**
  * The files every harness runs from EOL_HOME/app (a fixed path, never the npx cache). cli.mjs is among them because
  * live.mjs and cursor.mjs import it, and cli.mjs imports detect.mjs and codex-config.mjs.

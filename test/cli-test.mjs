@@ -152,7 +152,7 @@ try {
   const tomlAfter = fs.readFileSync(codexFile, 'utf8');
   assert.ok(tomlAfter.startsWith('# Keep this exactly\nmodel = "untouched"\n\n# >>> eol-connect (EarthOnline) >>>') && tomlAfter.includes('[mcp_servers.earthonline]') && tomlAfter.includes(JSON.stringify(path.join(env.EOL_HOME, 'app', 'mcp.mjs').replaceAll('\\', '/'))), 'our section in config.toml');
   assert.ok(fs.readdirSync(env.CODEX_HOME).some(f => f.startsWith('config.toml.eol-backup-')), 'config.toml backed up first');
-  assert.equal(JSON.parse(fs.readFileSync(path.join(env.EOL_HOME, 'config.json'), 'utf8')).codexWake, 'off', 'wake defaults to off without a terminal (DECISIONS 10-25 third set: fast/off, default off)');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(env.EOL_HOME, 'config.json'), 'utf8')).codexWake, 'fast', 'wake defaults to fast without a terminal (0.2.1, Bonan 10-29: default fast)');
   console.log('PASS 1: login --email then login --code (no terminal), private key file, no key in output, Codex section added');
   // car11 M4 on the real server: doctor finds nothing to fix after that setup; call reaches a tool with the saved key
   const checked = await runJson(['doctor', '--json']);
@@ -424,7 +424,7 @@ try {
   assert.ok((await run(['--key-stdin', '--agent', 'codex', '--codex-wake', 'front'], key + '\n')).includes('Codex ✓ (app and CLI; wake: fast).'), 'front is still fast');
   const usageText = await run(['setup', '--codex-wake', 'loud'], '', 2);
   assert.ok(usageText.includes('--codex-wake fast|off') && !/quiet/i.test(usageText), 'usage offers fast|off only');
-  console.log('PASS 10q: Codex wake is fast or off (default off); an old quiet, saved or passed, reads as off without an error');
+  console.log('PASS 10q: Codex wake is fast or off (default fast); an old quiet, saved or passed, reads as off without an error');
   await run(['uninstall']);
   assert.equal(fs.readFileSync(codexFile, 'utf8'), '# Keep this exactly\nmodel = "untouched"\n', 'uninstall gives config.toml back byte for byte');
   // someone else's earthonline in config.toml: the file is never touched

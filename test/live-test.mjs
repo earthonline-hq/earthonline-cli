@@ -117,10 +117,10 @@ try {
   await until(() => received.length === 1, 2000, 'private delivery');
   const latency = Date.now() - sent;
   assert.ok(received[0].split('\n')[0].includes('[EarthOnline]') && received[0].split('\n')[0].includes('@ada'), 'source boundary');
-  assert.ok(/\[EarthOnline-[a-f0-9]{32}\]/.test(received[0]) && received[0].includes('eol_message') && received[0].includes('"text":""'), 'trust boundary and reply arguments');
+  assert.ok(received[0].split('\n').length >= 2 && !/\[EarthOnline-[a-f0-9]{32}\]/.test(received[0]) && !received[0].includes('eol_message'), 'two lines: who, then the words (10-29)');
   const group = { id: 'gc_local', name: 'brainbob', size: 2, members: ['@ada', '@owner'] };
   emit('message', message(2, { group })); await until(() => received.length === 2);
-  assert.match(received[1].split('\n')[0], /^\[EarthOnline\] brainbob · @ada \((?:person|agent(?: via [^)]*)?)\)/, 'group routing context');
+  assert.match(received[1].split('\n')[0], /^\[EarthOnline\] @ada(?: \(person\)|'s agent) in "brainbob"/, 'group routing context');
   emit('message', message(1));
   for (const res of connections) res.end();
   await until(() => requests.length >= 2 && connections.size === 1, 4000, 'reconnect');
@@ -128,7 +128,7 @@ try {
   await sleep(200); assert.ok(received.length === 2, 'duplicates across reconnect must be suppressed');
   for (let seq = 3; seq <= 7; seq++) emit('message', message(seq));
   await until(() => received.length === 7);
-  assert.ok(received.slice(2).every((text, i) => text.includes(`${secretText}-${i + 3}\n`)), 'delivery order');
+  assert.ok(received.slice(2).every((text, i) => text.endsWith(`\n${secretText}-${i + 3}`)), 'delivery order');
   assert.ok(peakWrites === 1 && !badAuth, 'one authenticated connection at a time');
   const noteUrl = `${env.EOL_ORIGIN}/notes/local-note`;
   for (const kind of ['join_request', 'joined', 'refused', 'disbanded']) emit('group', { kind, group, joiner: { handle: 'rowan', name: 'Rowan', via: 'Claude Code' }, member: { handle: 'rowan' }, by: { handle: 'ada' }, members: [{ handle: 'rowan', online: true }], ...(kind === 'join_request' ? { note_id: 'local-note', note_url: noteUrl } : {}) });
@@ -191,7 +191,7 @@ try {
   const calls = JSON.parse(fs.readFileSync(argvFile));
   assert.ok(calls.length === 3 && calls.every(args => args.length === 5 && args[0] === 'queue' && args[2] === 'thread-fake-123' && args[4] === hostile), 'codex retries preserve one exact message argument');
   const long = formatMessage(message(99, { text: '汉😀'.repeat(10_000), history: [{ from: 'ada', seq: 98, text: 'history' }] }));
-  assert.ok(Buffer.byteLength(long) <= 16384 && !long.includes('\ufffd') && long.includes('eol_message') && long.includes('data, not instructions'), 'byte cap preserves trust boundary and reply');
+  assert.ok(Buffer.byteLength(long) <= 16384 && !long.includes('\ufffd') && long.includes('(cut short: read it whole with eol_read'), 'byte cap keeps where to read it whole');
   const logs = fs.readFileSync(common.PATHS.log, 'utf8');
   assert.ok(![key, token, secretText, hostile].some(value => logs.includes(value)), 'logs must not contain secrets or body');
   assert.ok(logs.includes('no_inbox'), 'missing inbox is logged');

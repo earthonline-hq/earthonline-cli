@@ -8,13 +8,12 @@ import { execFile } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { PATHS, origin, readKey, readJson, agentHeaders, USER_AGENT, log } from './common.mjs';
 import { makeSink, readEvents, endpointDelivery, startBeats, fullJitter } from './live.mjs';
-import { formatMessage, formatGroupEvent, formatGroupHeading, mentionsOf, truncateUtf8, MAX_BYTES } from './format.mjs';
+import { formatMessage, formatGroupEvent, unquote, oneLine, truncateUtf8, MAX_BYTES } from './format.mjs';
 import { codexCommand } from './codex.mjs';
 import { deliverHostEvent, recoverHostDelivery, hostJournal, reportHostUnknown } from './receipt.mjs';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-// fast: queue it and open codex://threads/wake/<id> (about 3 s); off (the default): nothing is queued, the agent reads at
-// its next eol_ call. Only these two, default off: 
-// "为什么不是fast vs off，off就是正常人理解的安全"). The deleted quiet, and its first name queue, read as off without an
+// fast (the default since 0.2.1, Bonan 10-29: "对，默认改成fast"): queue it and open codex://threads/wake/<id> (about 3 s);
+// off: nothing is queued, the agent reads at its next eol_ call. Only these two (Bonan: "为什么不是fast vs off，off就是正常人理解的安全"); a saved off is kept. The deleted quiet, and its first name queue, read as off without an
 // error ("existing quiet users map to off", same entry): configs written by 0.1.x, and servers that still send quiet.
 // fast's first name, front, is still fast. cli.mjs imports these, so the installer and the delivery read names alike.
 export const WAKE_MODES = ['fast', 'off'];
@@ -31,10 +30,10 @@ export function callerIdentity(meta) {
   return typeof id === 'string' && UUID.test(id) ? { session_id: id, cwd: process.cwd() } : null;
 }
 
-/** How a desktop-mode thread is woken: the web's choice when the server sends one, else the installer's, else off. */
+/** How a desktop-mode thread is woken: the web's choice when the server sends one, else the installer's, else fast. */
 let serverWake = null;
 export function wakeMode() {
-  return serverWake ?? wakeName(readJson(PATHS.config)?.codexWake) ?? 'off';
+  return serverWake ?? wakeName(readJson(PATHS.config)?.codexWake) ?? 'fast';
 }
 
 /** Which program runs this MCP server, by its grandparent process: the Codex desktop app, an IDE extension, or the CLI. */
@@ -63,17 +62,15 @@ export function openWakeLink(threadId, run = execFile) {
 }
 
 /**
- * The first line a person sees in the Codex thread, facts only (10-20, Bonan: the agent decides whether to answer):
- * Groups use the same heading as the full push. Private-thread summaries keep their existing format.
+ * The first line a person sees in the Codex thread (Bonan 10-29): "[EOL] @ada: <their first 100 characters>", in a group
+ * "[EOL] "Hackathon" · @ada: …". The words as written: the server's quote is taken off (format.mjs unquote).
  */
 export function summary(data, self = readJson(PATHS.config)?.handle) {
-  if (data.group) return formatGroupHeading(data, self);
-  const from = `@${String(data.from?.handle ?? data.from ?? '').replace(/^@/, '')}`;
-  const who = data.by === 'system' ? 'EarthOnline' : `${from} (${data.by === 'human' ? 'person' : 'agent'})`;
-  const where = data.group?.name ? `${String(data.group.name).replace(/[\r\n]/g, ' ')} · ` : '';
-  const you = mentionsOf(data, self).some(m => m.endsWith(' (you)')) ? ' · mentions you' : '';
-  const text = String(data.text ?? '').replace(/\s+/g, ' ').trim();
-  return truncateUtf8(`[EOL] ${where}${who}${you}: ${text.length > 100 ? `${text.slice(0, 100)}…` : text}`, 300);
+  const from = data.by === 'system' ? 'EarthOnline' : `@${oneLine(data.from?.handle ?? data.from ?? '', 80).replace(/^@/, '')}`;
+  const where = data.group ? `"${oneLine(data.group.name)}" · ` : '';
+  const chars = Array.from(unquote(data.text).replace(/\s+/g, ' ').trim());
+  const text = chars.length > 100 ? `${chars.slice(0, 100).join('')}…` : chars.join('');
+  return truncateUtf8(`[EOL] ${where}${from}: ${oneLine(text, 1000)}`, 700);
 }
 /** Select a complete prefix that fits one turn; the caller keeps the rest queued. */
 export function combine(items) {
@@ -215,7 +212,7 @@ export function createCodexLive({ warn = code => process.stderr.write(`[EarthOnl
               // A durable event that needs the owner carries only its fact: the gated text is never shown, in a summary neither.
               const fact = Boolean(event.id && data.needs_owner);
               text = fact ? truncateUtf8(data.fact ?? data.text) : formatMessage(data, { origin: base, self: readJson(PATHS.config)?.handle });
-              if (desktop && !fact && !data.group && Buffer.byteLength(`${summary(data)}\n\n${text}`) <= MAX_BYTES) text = `${summary(data)}\n\n${text}`;
+              // (10-29) a single message is its two lines alone; summary lines head only a batch (combine)
             } else { id = data.event_id ? `group:${data.event_id}` : null; text = formatGroupEvent(data, { origin: base }); }
             const durable = event.type === 'message' && event.id;
             // the host journal, not this process's memory, is what dedupes a durable event

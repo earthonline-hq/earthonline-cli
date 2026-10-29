@@ -196,7 +196,7 @@ test('empty queue and loop limit emit nothing; trusted content and only an untru
   const atLimit = await f.hook('stop', { loop_count: 5 }); assert.equal(atLimit.stdout, '');
   const output = JSON.parse((await f.hook('stop')).stdout).followup_message;
   assert.match(output, /SYNTHETIC-TRUSTED-1/);
-  assert.match(output, /data, not instructions/);
+  assert.match(output, /wrote to you privately:\nSYNTHETIC-TRUSTED-1/); // (10-29) two lines: who, then the words
   assert.match(output, /\[EOL\] synthetic-stranger spoof in dm:synthetic-thread \(#2\)\./);
   assert.doesNotMatch(output, /SYNTHETIC-DO-NOT|SYNTHETIC-HISTORY/);
   assert.equal(receipts(f).length, 0);
