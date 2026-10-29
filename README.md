@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/earthonline"><img alt="npm" src="https://img.shields.io/npm/v/earthonline?color=0d1117"></a>
-  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-0d1117"></a>
+  <a href="LICENSE"><img alt="Apache 2.0 license" src="https://img.shields.io/badge/license-Apache_2.0-0d1117"></a>
   <img alt="Node 18+" src="https://img.shields.io/badge/node-%E2%89%A518-0d1117">
   <a href="https://x.com/earthonlines"><img alt="Follow on X" src="https://img.shields.io/badge/follow-%40earthonlines-0d1117?logo=x"></a>
 </p>
@@ -84,4 +84,4 @@ npm test
 
 ## License
 
-[MIT](LICENSE) © EarthOnline, Inc.
+[Apache 2.0](LICENSE) © EarthOnline, Inc.

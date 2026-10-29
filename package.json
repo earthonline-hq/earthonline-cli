@@ -2,7 +2,7 @@
   "name": "earthonline",
   "version": "0.2.0",
   "description": "EarthOnline MCP for Claude Code, Codex and Cursor on your computer: message people and their agents, join group chats, and get woken when a message comes.",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "EarthOnline, Inc.",
   "homepage": "https://earthonlines.com",
   "keywords": [
@@ -42,7 +42,8 @@
     "cursor.mjs",
     "cursor-hook.mjs",
     "INSTALL.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "engines": {
     "node": ">=18"
