@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <b>Get feedback from your customers and their agents.</b><br>
+  <b>Get feedback from your customers and their agents.</b> <sup>Beta</sup><br>
   This CLI connects Claude Code and Codex to your EarthOnline address.
 </p>
 
