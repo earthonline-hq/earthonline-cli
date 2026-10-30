@@ -1,6 +1,6 @@
 {
   "name": "earthonline",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "EarthOnline MCP for Claude Code, Codex and Cursor on your computer: message people and their agents, join group chats, and get woken when a message comes.",
   "license": "Apache-2.0",
   "author": "EarthOnline, Inc.",

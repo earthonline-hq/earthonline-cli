@@ -35,7 +35,7 @@ const ownHook = h => h?.type === 'command' && typeof h.command === 'string' && s
 let out = null;
 const say = s => (out ??= makeOut(false)).say(s);
 /** Whether a person can be asked: a terminal on stdin, and not --json. Without one nothing is ever asked (design 1026 §10). */
-const interactive = () => Boolean(process.stdin.isTTY) && !out?.json;
+const interactive = () => (Boolean(process.stdin.isTTY) || process.env.EOL_TEST_TTY === '1') && !out?.json; // EOL_TEST_TTY: tests drive the questions through a pipe
 function object(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 function load(file) {
   if (!fs.existsSync(file)) return {};
@@ -247,7 +247,9 @@ async function verifyCode(base, { email, code, handle = null, name = null }) {
   if (!KEY_RE.test(result.key ?? '') || !result.robot?.handle) throw new CliError('UNKNOWN_ERROR', 'EarthOnline did not return a usable sign-in.');
   const warnings = writeSecret(PATHS.key, result.key + '\n');
   clearPending();
-  return { handle: result.robot.handle.replace(/^@/, ''), created: result.created === true, keyId: typeof result.key_id === 'string' ? result.key_id : null, hint: result.handle ?? null, warnings };
+  const signed = { handle: result.robot.handle.replace(/^@/, ''), created: result.created === true, keyId: typeof result.key_id === 'string' ? result.key_id : null, hint: result.handle ?? null, warnings };
+  Object.defineProperty(signed, 'key', { value: result.key, enumerable: false }); // for the next call of this sign-in only; never printed
+  return signed;
 }
 
 /** --key-stdin: a key read from stdin (never an argument: the process list shows those; gh auth login --with-token). */
@@ -261,26 +263,84 @@ async function keyFromStdin(base) {
   return { handle: result.robot.handle.replace(/^@/, ''), warnings: writeSecret(PATHS.key, key + '\n') };
 }
 
-/** A terminal's sign-in: the same two steps, asked for one by one. */
+/**
+ * A terminal's sign-in with no flags (Bonan 10-29: "没必要npm在这里登录，直接弹出网页让人登录不行么"): the web page, as login --device does
+ * it (the page is opened, Google or email there, a new account's handle chosen there). Only when the server has no device flow, or
+ * cannot answer it, does the terminal ask for the email and the code itself (askLogin).
+ */
+async function terminalLogin(base, warnings) {
+  try {
+    const done = await deviceLogin({ asked: base, fallback: base, tty: true, say });
+    warnings.push(...done.signed.warnings);
+    return { handle: done.signed.handle, created: done.signed.created, keyId: done.signed.keyId, hint: null, warnings: [] };
+  } catch (err) {
+    if (!(err instanceof CliError) || !['unsupported', 'unavailable', 'rate_limited', 'UNKNOWN_ERROR'].includes(err.code)) throw err;
+    say('Signing in on a web page is not available right now. Use the email code instead.');
+    return askLogin(base, warnings);
+  }
+}
+
+/**
+ * The email-code sign-in: email, the code, and only then (a new account whose handle can still be picked) the handle. An address that
+ * already has an account is never asked for one, and nothing asks the server whether an address has an account (Bonan 10-29: an old
+ * user asked "the handle you want" thinks a new account is being made). The handle is set once, with eol_update_profile.
+ */
 async function askLogin(base, warnings) {
   const q = questions();
   try {
     const email = await q.ask('Email: ');
-    let handle = (await q.ask('The handle you want (earthonlines.com/@handle, permanent; Enter to skip): ', true)).replace(/^@/, '');
-    const sent = await sendCode(base, { email, handle: handle || null });
+    const sent = await sendCode(base, { email });
     warnings.push(...sent.warnings);
     say(`Code sent to ${sent.to}. It works for 10 minutes.`);
-    const hint = sent.result.handle;
-    if (hint?.available === false) {
-      say(`@${hint.wanted} is not available (${hint.reason})${hint.suggestions?.length ? `. Free: ${hint.suggestions.map(h => '@' + h).join(', ')}` : ''}.`);
-      handle = (await q.ask('Another handle (Enter to choose one later): ', true)).replace(/^@/, '');
+    // a person at a terminal gets a person's words and another try here (up to 3), or Enter for a new code; not the agent's next steps
+    let signed = null, prompt = '8-letter code from your email: ';
+    for (let attempt = 1; !signed; attempt++) {
+      const code = await q.ask(prompt, attempt > 1);
+      if (!code) {
+        try { const again = await sendCode(base, { email }); warnings.push(...again.warnings); say(`A new code was sent to ${again.to}. It works for 10 minutes.`); }
+        catch (err) { if (!(err instanceof CliError) || err.code !== 'rate_limited') throw err; say('A code was sent a moment ago: wait a few seconds, then enter the newest one.'); }
+        prompt = '8-letter code from your email: ';
+        continue;
+      }
+      try { signed = await verifyCode(base, { email, code }); } catch (err) {
+        if (!(err instanceof CliError) || err.code !== 'code_invalid' || attempt >= 3) throw err;
+        say("That code didn't work (wrong, used, or older than 10 minutes). Check the newest email from EarthOnline and try again.");
+        prompt = 'Code (Enter to send a new one): ';
+      }
     }
-    const code = await q.ask('8-letter code from your email: ');
-    const name = await q.ask('Name (new account only; optional): ', true);
-    const signed = await verifyCode(base, { email, code, handle: handle || null, name: name || null });
-    warnings.push(...signed.warnings, ...handleWarnings(signed));
+    warnings.push(...signed.warnings);
+    if (signed.created) {
+      const picked = await pickHandle(q, base, signed.key, signed.handle, warnings);
+      if (picked) signed.handle = picked;
+    }
     return signed;
   } finally { q.close(); }
+}
+
+/** A new account's one chance to pick its handle (and, optionally, a name). Returns the handle now held, or null when it stays. */
+async function pickHandle(q, base, key, standIn, warnings) {
+  try {
+    const me = await callTool(base, 'eol_whoami', {}, key);
+    if (me.handle_settable !== true) return null;
+  } catch { return null; } // cannot tell: keep the handle; eol_update_profile stays open to the owner
+  let handle = standIn;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const wanted = (await q.ask(attempt ? `Another handle (Enter to keep @${standIn}): ` : `Pick your handle (earthonlines.com/@handle, permanent; Enter to keep @${standIn}): `, true)).replace(/^@/, '');
+    if (!wanted) break;
+    try {
+      const done = await callTool(base, 'eol_update_profile', { handle: wanted }, key);
+      handle = String(done.robot?.handle ?? done.handle ?? wanted).replace(/^@/, '');
+      break;
+    } catch (err) {
+      if (!(err instanceof CliError) || !['taken', 'reserved', 'invalid'].includes(err.extra?.reason ?? (err.code === 'invalid_input' ? 'invalid' : ''))) { warnings.push({ step: 'handle', error: String(err?.message ?? err), fix: 'echo {"handle":"<handle>"} | npx earthonline call eol_update_profile --input -' }); break; }
+      const free = err.extra?.suggestions?.length ? ` Free: ${err.extra.suggestions.map(h => '@' + h).join(', ')}.` : '';
+      say(`${err.message}${free}`);
+      if (attempt) warnings.push({ step: 'handle', error: `@${wanted} could not be had; the account is @${standIn} until a handle is chosen.${free}`, fix: 'echo {"handle":"<handle>"} | npx earthonline call eol_update_profile --input -' });
+    }
+  }
+  const name = (await q.ask('Name (optional): ', true));
+  if (name) { try { await callTool(base, 'eol_update_profile', { name }, key); } catch { /* the name can be set later */ } }
+  return handle;
 }
 
 /** What eol_login's handle answer means for the person (B1): a handle that could not be had is a warning, never silent. */
@@ -319,7 +379,7 @@ async function signIn(base, keyStdin, reuseKey = false, warnings = []) {
     throw new CliError('invalid_input', 'EOL_KEY is set but is not an EarthOnline key (eolc_ and 40 letters and digits).', { exit: EXIT.input, next: ['Unset EOL_KEY, or set it to a key.'] });
   }
   if (!interactive()) throw needLogin('This computer is not signed in to EarthOnline.');
-  return (await askLogin(base, warnings)).handle;
+  return (await terminalLogin(base, warnings)).handle;
 }
 
 /** login --email: sends the code and returns at once (design 1026 §12: a shell waits at most 10 minutes for a command). */
@@ -428,7 +488,7 @@ async function login(opts) {
   if (opts.email || opts.resend) return loginEmail(opts);
   if (!interactive()) throw needLogin('login needs --email (to send the code) or --code (to use it).');
   const base = loginBase(opts.origin), warnings = [];
-  const signed = await askLogin(base, warnings);
+  const signed = await terminalLogin(base, warnings);
   return finishLogin(base, { handle: signed.handle, created: signed.created, keyId: signed.keyId, hint: null, warnings }, opts);
 }
 /**

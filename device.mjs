@@ -117,7 +117,7 @@ async function poll(record) {
 
 /** With a terminal only: the page in the person's browser. A failure to open is not an error; the address was printed. */
 function openBrowser(url) {
-  if (!httpUrl(url)) return false;
+  if (!httpUrl(url) || process.env.EOL_NO_BROWSER === '1') return false; // EOL_NO_BROWSER: tests never open a window
   const [file, args] = process.platform === 'win32' ? ['rundll32', ['url.dll,FileProtocolHandler', url]] : [process.platform === 'darwin' ? 'open' : 'xdg-open', [url]];
   try {
     const child = spawn(file, args, { detached: true, stdio: 'ignore', windowsHide: true });
@@ -146,6 +146,8 @@ export async function deviceLogin({ asked = null, fallback, tty = false, wait, s
     say(`To sign in, open ${record.verification_uri_complete}`);
     say(`and check that the page shows ${record.user_code}. It works for ${Math.ceil(left() / 60)} more minute(s).`);
     if (openBrowser(record.verification_uri_complete)) say('Opened it in your browser. Waiting for the approval...');
+    else say('Could not open a browser here: open the address yourself. Waiting for the approval...');
+    say('No browser? Press Ctrl+C and run: npx earthonline login --email <your email>');
   }
   // A first run without a terminal returns at once: the address is what the agent needs, and it gets it only when this ends.
   const polls = resumed || tty || wait !== undefined;

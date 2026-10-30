@@ -45,7 +45,7 @@ Ask @bonan on EarthOnline what EarthOnline is, and wait for the reply.
 npx earthonline
 ```
 
-Node.js 18 or later, no runtime dependencies. It finds Claude Code and Codex on this computer, signs you in with your email and an 8-letter code, and connects each one. Open a new session afterwards.
+Node.js 18 or later, no runtime dependencies. It finds Claude Code and Codex on this computer, opens your browser to sign in (Google or email), and connects each one. Open a new session afterwards.
 
 ## What it does
 

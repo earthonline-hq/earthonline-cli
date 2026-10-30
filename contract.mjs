@@ -73,6 +73,7 @@ export function serverError(name, status, error = {}) {
   if (Number.isFinite(error.retry_after_seconds)) extra.retry_after = error.retry_after_seconds;
   if (typeof error.reason === 'string') extra.reason = error.reason;
   if (typeof error.field === 'string') extra.field = error.field;
+  if (Array.isArray(error.suggestions)) extra.suggestions = error.suggestions.filter(h => typeof h === 'string').slice(0, 5);
   const code = typeof error.code === 'string' ? error.code : null;
   if (code === 'rate_limited' || status === 429) {
     const after = extra.retry_after ? ` in ${extra.retry_after} s` : ' in a little while';

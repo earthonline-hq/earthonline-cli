@@ -32,12 +32,17 @@ function fakeServer(label) {
   const server = http.createServer(async (req, res) => {
     let raw = ''; for await (const chunk of req) raw += chunk;
     const name = req.url.replace(/^\/api\/tools\//, '');
+    if (req.url.startsWith('/oauth/')) return refuse(res, 404, { error: 'not_found' }); // no device flow here
     const args = raw ? JSON.parse(raw) : {};
     calls.push({ name, args, auth: req.headers.authorization ?? null, ua: req.headers['user-agent'] ?? '' });
     if (req.method === 'GET' && req.url === '/api/tools') return reply(res, 200, { ok: true, result: { tools: [] } }); // no delivery settings
     if (name === 'eol_whoami') {
       const handle = { [`Bearer ${KEY}`]: '@ada', [`Bearer ${ENV_KEY}`]: '@envbot' }[req.headers.authorization];
-      return handle ? reply(res, 200, { ok: true, result: { robot: { handle } } }) : refuse(res, 401, { code: 'unauthorized', message: 'Sign in first.' });
+      return handle ? reply(res, 200, { ok: true, result: { robot: { handle }, handle_settable: handle === '@ada' } }) : refuse(res, 401, { code: 'unauthorized', message: 'Sign in first.' });
+    }
+    if (name === 'eol_update_profile') {
+      if (args.handle === 'taken') return refuse(res, 400, { code: 'invalid_argument', field: 'handle', reason: 'taken', message: 'The handle @taken is already taken. Pick another one.', suggestions: ['taken2', 'taken3'] });
+      return reply(res, 200, { ok: true, result: { robot: { handle: args.handle ? '@' + args.handle : '@ada' } } });
     }
     if (name !== 'eol_login') return refuse(res, 404, { code: 'not_found', message: 'No such tool.' });
     if (!args.code) {
@@ -228,6 +233,21 @@ try {
   console.log(`PASS 11: Node gate (this Node ${process.version} passes; 16 and 17 refused)`);
 
   assert.ok(!captured.includes('eolc_'), 'no key, and nothing key-shaped, in any output');
+  // 12. A bare login at a terminal (EOL_TEST_TTY) where the web page is not offered (the fake has no device flow): the email code, asked
+  // after the address is known. A wrong code gets a person's words and another try; the handle is asked only now, for a new account.
+  await new Promise(r => setTimeout(r, 31000)); // the fake's 30 s resend gap
+  const ttyEnv = { ...envB(), EOL_TEST_TTY: '1', EOL_NO_BROWSER: '1' };
+  r = await cli(['login', '--no-setup'], { env: ttyEnv, input: ['ada@example.test', 'WRONGCOD', CODE, 'taken', 'ada_new', ''].join(String.fromCharCode(10)) + String.fromCharCode(10) });
+  assert.equal(r.code, 0, r.stderr + r.stdout);
+  assert.ok(/didn't work \(wrong, used, or older than 10 minutes\)/.test(r.stdout), 'a person words for a wrong code');
+  assert.ok(!/eol_login|login --code/.test(r.stdout + r.stderr), 'no agent instructions at a terminal');
+  assert.ok(/taken is already taken.*@taken2, @taken3/.test(r.stdout), 'a taken handle shows the free ones');
+  assert.ok(/Signed in as @ada_new/.test(r.stdout), r.stdout);
+  const asked = B.calls.filter(c => c.name === 'eol_update_profile').map(c => c.args);
+  assert.deepEqual(asked, [{ handle: 'taken' }, { handle: 'ada_new' }], 'the handle is set after sign-in, not sent with the code');
+  assert.ok(!B.calls.some(c => c.name === 'eol_login' && c.args.handle), 'no handle goes with the email or the code');
+  console.log('PASS 12: terminal login falls back to email; wrong code retried in place; handle asked only for a new account');
+
   console.log('PASS: login stories (no eolc_ in any output)');
 } catch (err) {
   console.error('FAIL:', String(err?.stack ?? err).replace(/eolc_[0-9A-Za-z]+/g, '[redacted]'));

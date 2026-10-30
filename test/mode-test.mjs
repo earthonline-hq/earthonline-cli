@@ -71,7 +71,7 @@ async function fixture({ config, harness = 'claude-code', tools = toolTable, sig
     stdin: { isTTY: tty }, stdout: { write: s => output.push(s), on() {} },
     stderr: { write: s => errors.push(s) }, on() {}, exit: code => { throw new Error(`Unexpected exit ${code}`); },
   };
-  const globals = { process: proc, URL, AbortSignal, setTimeout, clearTimeout };
+  const globals = { process: proc, URL, URLSearchParams, AbortSignal, setTimeout, clearTimeout };
   const imports = {
     'node:fs': memoryFs, 'node:path': path, 'node:os': { homedir: () => home },
     'node:url': { fileURLToPath }, 'node:util': { promisify }, 'node:crypto': crypto,
@@ -129,6 +129,7 @@ async function fixture({ config, harness = 'claude-code', tools = toolTable, sig
   imports['./common.mjs'] = await evaluate('common.mjs', imports, globals);
   imports['./codex-config.mjs'] = await evaluate('codex-config.mjs', imports, globals);
   globals.fetch = async (url, options) => {
+    if (url.startsWith(env.EOL_ORIGIN + '/oauth/')) return { ok: false, status: 404, headers: new Headers(), json: async () => ({ error: 'not_found' }) }; // no sign-in on a web page here: the email code
     assert.ok(url.startsWith(env.EOL_ORIGIN + '/api/tools'), 'only the fake server is addressed');
     requests.push({ url, options });
     const result = url.endsWith('/api/tools') ? { tools }
@@ -255,8 +256,8 @@ for (const harness of ['claude-code', 'codex']) {
     assert.equal(switching.config().mode, mode);
     assert.deepEqual((await (await switching.mcp(true))('tools/list')).result.tools, toolTable, 'new session runs the installed proxy');
   }
-  // a person at a terminal (0.2.0: without one nothing is asked; login-test.mjs): email, handle (skipped), code, name
-  const fresh = await fixture({ harness, signedIn: false, tty: true, input: ['tester@example.invalid', '', 'abcdefgh', 'Tester'] });
+  // a person at a terminal (0.2.2: the web page first, here not offered, so email and code; the handle only for a new account; login-test.mjs)
+  const fresh = await fixture({ harness, signedIn: false, tty: true, input: ['tester@example.invalid', 'abcdefgh'] });
   const result = await fresh.cli(['--mode', 'legacy']);
   assert.equal(result.code, 0, result.err);
   assertInstalled(fresh, harness);

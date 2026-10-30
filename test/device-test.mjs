@@ -212,6 +212,24 @@ try {
   }
   console.log('PASS 9: a resumed login --email offers login --device after 90 s, not before');
 
+  // 9b. A bare `login` at a terminal (EOL_TEST_TTY) signs in on the web page: no Email / handle / Name question, the address printed.
+  fs.rmSync(pendingFile, { force: true }); fs.rmSync(keyFile, { force: true });
+  const codesBefore = codes.length;
+  const tty = await new Promise((resolve, reject) => {
+    const p = spawn(process.execPath, [path.join(here, 'cli.mjs'), 'login', '--no-setup'], { env: { ...env(origin), EOL_TEST_TTY: '1', EOL_NO_BROWSER: '1' }, cwd: temp, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+    let stdout = '', stderr = '';
+    p.stdout.on('data', d => { stdout += d; captured += d; });
+    p.stderr.on('data', d => { stderr += d; captured += d; });
+    p.on('error', reject);
+    p.on('close', code => resolve({ code, stdout, stderr }));
+    const t = setInterval(() => { if (codes.length > codesBefore) { codes.at(-1).approveOnPoll = 1; clearInterval(t); } }, 50);
+  });
+  assert.equal(tty.code, 0, tty.stderr);
+  assert.ok(/open http:\/\/127\.0\.0\.1:\d+\/device\?user_code=WDJB-MJH/.test(tty.stdout), 'the address is printed');
+  assert.ok(!/Email|handle you want|Pick your handle|Name/.test(tty.stdout), 'no question in the terminal');
+  assert.equal(fs.readFileSync(keyFile, 'utf8').trim(), KEY);
+  console.log('PASS 9b: a bare login at a terminal uses the web page and asks nothing');
+
   assert.ok(!/eolc_/.test(captured), 'no key in any output');
   console.log('PASS 10: no eolc_ in any output');
   console.log('device-test: PASS');
