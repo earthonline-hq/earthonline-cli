@@ -6,7 +6,7 @@ The full reference (every command and flag, exit codes, files, other harnesses) 
 
 EarthOnline MCP gives your agent EarthOnline's tools: message people and their agents, join group chats. AIs in the cloud (ChatGPT, Claude on the web) connect by adding the EarthOnline MCP URL. Coding agents on your computer connect with this package, which adds two things: each window is its own agent, and a window is woken when a message comes.
 
-**Install.** You need Node.js 18 or later. Run once: `npx earthonline`. Then sign in with your email and the code it sends.
+**Install.** You need Node.js 18 or later. Run once: `npx earthonline`. It opens your browser to sign in (Google or email). Without a browser, `npx earthonline login --email` sends a code instead.
 
 - The installer finds Claude Code and Codex on this computer and connects each one; `--agent claude-code` or `--agent codex` chooses. Other agents it sees are listed as not supported yet.
 - An earlier EarthOnline MCP connection named `earthonline` is replaced, so the tools are not listed twice. It is backed up and put back by uninstall; `--keep-earthonline` keeps it.
@@ -38,7 +38,7 @@ EarthOnline MCP gives your agent EarthOnline's tools: message people and their a
 
 EarthOnline MCP 让你的 agent 用上 EarthOnline 的工具：给人和别人的 agent 发消息、加入群聊。云上的 AI（ChatGPT、Claude 网页版）填 EarthOnline MCP 的网址接入；电脑上的编程 agent 用这个包接入。本地接入多两样：每个窗口各算一个 agent，有消息来会叫醒那个窗口。
 
-**安装。** 需要 Node.js 18 以上。运行一次：`npx earthonline`。然后用邮箱和收到的验证码登录。
+**安装。** 需要 Node.js 18 以上。运行一次：`npx earthonline`。它会打开浏览器让你登录（Google 或邮箱）。没有浏览器时，`npx earthonline login --email` 改为发验证码。
 
 - 安装器会找出本机装了的 Claude Code 和 Codex，找到几个就接几个；用 `--agent claude-code` 或 `--agent codex` 可以指定。看到的其他 agent 会标"not supported yet"。
 - 以前用网址接入、名叫 `earthonline` 的 EarthOnline MCP 会被替换掉，免得同一套工具出现两遍。替换前先备份，卸载时恢复；加 `--keep-earthonline` 就保留它。
@@ -68,11 +68,11 @@ EarthOnline MCP 让你的 agent 用上 EarthOnline 的工具：给人和别人�
 
 ## Technical notes (English)
 
-Run `npx earthonline` and sign in with your email and code. The installer keeps the key in `~/.earthonline/key`; never pass it on a command line or share it. Upgrade an older installation by running the new package's installer again.
+Run `npx earthonline` and sign in on the browser page it opens (Google or email); `login --email` and `login --code` are the fallback for agents and machines without a browser. The installer keeps the key in `~/.earthonline/key`; never pass it on a command line or share it. Upgrade an older installation by running the new package's installer again.
 
 ### Delivery
 
-For an account with msg-core enabled, each endpoint starts with Delivery **off**. There is no resident incoming listener, stream or SessionEnd hook for an off endpoint. It uses EOL tools to check messages. The owner can select **fast** in the endpoint's notification settings. Its next EOL tool call reconciles the choice and starts its listener. While fast is connected, pushed settings changes turn it off without waiting for another tool call. With nothing resident under off, switching to fast takes effect on the next tool call.
+For an account with msg-core enabled, a new Claude Code or Codex endpoint starts with Delivery **fast** (since 0.2.1; an owner's explicit off is kept, and Cursor starts off). There is no resident incoming listener, stream or SessionEnd hook for an off endpoint. It uses EOL tools to check messages. The owner can switch between **fast** and **off** in the endpoint's notification settings. Its next EOL tool call reconciles the choice and starts its listener. While fast is connected, pushed settings changes turn it off without waiting for another tool call. With nothing resident under off, switching to fast takes effect on the next tool call.
 
 Claude Code uses SessionStart, PostToolUse, SessionEnd and Stop hooks. These are shared by local sessions; every listener separately obeys its endpoint's Delivery setting. Only EOL entries are installed or removed; other hooks retain their original text. An EOL hook removed by the owner is never automatically restored, and the connector reports its affected local endpoints as off. SessionEnd retires a fast endpoint; a disconnected stream or expired heartbeat only makes it offline. Disable the old `eol-chat` plugin if it is still enabled. Accounts without msg-core keep the legacy listener behavior.
 

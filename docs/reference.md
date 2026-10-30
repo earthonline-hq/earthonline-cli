@@ -31,7 +31,7 @@ To try a local build instead, install it into a folder and run it from there: `n
 The installer:
 
 1. Looks for the agents installed on this computer (see [Detection](#detection)) and connects each supported one it finds. To choose them yourself, pass `--agent claude-code`, `--agent codex`, or both.
-2. Signs you in: your email, the handle you want, the eight-letter code from the email, and an optional name for a new account. An existing sign-in can be kept. For scripted installs, pipe a key with `--key-stdin`; never put a key in a command argument.
+2. Signs you in: it opens your browser (Google or email). Without a browser, or with `login --email`, it uses your email and the eight-letter code from the email instead. The handle you want and an optional name are asked only for a new account, after sign-in. An existing sign-in can be kept. For scripted installs, pipe a key with `--key-stdin`; never put a key in a command argument.
 3. Sets up each agent as described below and prints one line per agent.
 
 Without a terminal (an agent running it from its shell tool, CI), it never asks anything: it exits with code 2 and the commands below.
