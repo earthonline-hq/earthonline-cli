@@ -640,7 +640,6 @@ async function codexDelivery() {
 // 10-20 on Bonan's machine, it does not take the focus), default fast since 0.2.1 (Bonan 10-29: "对，默认改成fast"); a wake
 // already saved (an owner's off included) is kept. wakeName is codex-live.mjs's, so an old quiet
 // (saved by 0.1.x, or in an old script's --codex-wake) reads as off here exactly as the delivery reads it.
-const WAKES = { off: 'Off: nothing enters the thread; the agent sees new messages at its next eol_ call', fast: 'Fast: queue it and wake the Codex app (about 3 s)' };
 async function installCodex(config, opts) {
   let found = true;
   try { codexCommand(); } catch { found = false; }
@@ -668,21 +667,15 @@ async function installCodex(config, opts) {
     if (next.separator !== null) config.codexBlock = { separator: next.separator };
     say(`Codex: added EarthOnline MCP to ${file}: only the lines between the "eol-connect" markers${backup ? `; the file before it is ${backup}` : ''}. The Codex app and plain codex load it in new threads; uninstall removes it.`);
   }
-  // How a thread in the Codex app is woken when a message comes: asked once (the web's setting wins once it exists). Enter
-  // keeps the saved choice, else fast.
-  let wake = wakeName(opts.codexWake) ?? wakeName(config.codexWake);
-  if (!opts.codexWake && !opts.keyStdin && interactive()) {
-    const q = questions();
-    const current = wake ?? 'fast';
-    try {
-      const answer = await q.ask(`When a message arrives for a thread in the Codex app:\n  1) ${WAKES.fast}${current === 'fast' ? ' [default]' : ''}\n  2) ${WAKES.off}${current === 'off' ? ' [default]' : ''}\nChoose 1 or 2: `, true);
-      wake = answer === '1' ? 'fast' : answer === '2' ? 'off' : current;
-    } finally { q.close(); }
-  }
+  // How a thread in the Codex app is woken when a message comes: never asked (Bonan 10-29: no "Choose 1 or 2"): --codex-wake, else the
+  // saved choice, else fast; one line says how to turn it off (the web's setting wins once it exists).
+  const wake = wakeName(opts.codexWake) ?? wakeName(config.codexWake);
   config.codexMcpName = name;
   config.codexWake = wake ?? 'fast';
   saveConfig(config);
-  say(`Codex: a thread is connected from its first eol_ tool call. Waking: ${WAKES[config.codexWake]}. Change it with npx earthonline --agent codex --codex-wake fast|off. A terminal session with instant delivery: npx earthonline codex.`);
+  say(config.codexWake === 'fast'
+    ? 'Codex: new messages wake the Codex app (fast). Turn it off: npx earthonline --agent codex --codex-wake off'
+    : 'Codex: new messages do not wake the Codex app (off). Turn it on: npx earthonline --agent codex --codex-wake fast');
   return `Codex ✓ (app and CLI; wake: ${config.codexWake}).`;
 }
 async function installClaude(value, config, opts, modeOnly = false) {
